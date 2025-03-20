@@ -10,17 +10,17 @@ import { MoviesService } from './movie/movies.service';
 
 @Module({
   imports: [
-    // TypeOrmModule.forRoot({
-    //   type: 'postgres',
-    //   host: 'localhost',
-    //   port: 5432,
-    //   username: 'popcorn_palace',
-    //   password: 'popcorn_palace',
-    //   database: 'popcorn_palace',
-    //   entities: [Movie],
-    //   synchronize: true, // Set to false in production
-    // }),
-    // MoviesModule
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'postgres',
+      password: 'mysecretpassword',
+      database: 'popcorn-palace',
+      entities: [Movie],
+      synchronize: true, // Set to false in production
+    }),
+    MoviesModule
   ],
   controllers: [AppController],
   providers: [AppService],

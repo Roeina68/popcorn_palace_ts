@@ -12,7 +12,7 @@ export class Movie {
   duration: number;
   @Column()
   release_year: number;
-  @Column()
+  @Column('float')
   rating: number;
 }
 
