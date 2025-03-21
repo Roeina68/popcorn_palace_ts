@@ -3,10 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { MoviesModule } from './movie/movies.module';
-import { Movie } from './movie/movie.model';
-import { MoviesController } from './movie/movies.controller';
-import { MoviesService } from './movie/movies.service';
+import { MoviesModule } from './movies/movies.module';
 
 @Module({
   imports: [
@@ -17,7 +14,7 @@ import { MoviesService } from './movie/movies.service';
       username: 'postgres',
       password: 'mysecretpassword',
       database: 'popcorn-palace',
-      entities: [Movie],
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true, // Set to false in production
     }),
     MoviesModule
