@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Movie } from './entities/movie.entity';
+import { Injectable, NotFoundException, ConflictException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Movie } from "./entities/movie.entity";
+import { CreateMovieDto } from "./dtos/create-movie.dto";
+import { UpdateMovieDto } from "./dtos/update-movie.dto";
 
 @Injectable()
 export class MoviesService {
@@ -10,47 +12,52 @@ export class MoviesService {
         private moviesRepository: Repository<Movie>,
     ) {}
 
-    async findAll(): Promise<Movie[]> {
-        return this.moviesRepository.find();
-    }
-
-    async findOne(id: number): Promise<Movie> {
-        const movie = await this.moviesRepository.findOne({ where: { id } });
-        if (!movie) {
-            throw new NotFoundException(`Movie with ID ${id} not found`);
+    async create(createMovieDto: CreateMovieDto): Promise<Movie> {
+        // Check if movie with this title already exists
+        const existingMovie = await this.moviesRepository.findOneBy({ 
+            title: createMovieDto.title 
+        });
+        
+        if (existingMovie) {
+            throw new ConflictException(`Movie with title "${createMovieDto.title}" already exists`);
         }
-        return movie;
-    }
 
-    async findOneByTitle(title: string): Promise<Movie> {
-        const decodedTitle = decodeURIComponent(title);
-        const movie = await this.moviesRepository.findOne({ where: { movieTitle: decodedTitle } });
-        if (!movie) {
-            throw new NotFoundException(`Movie with title "${decodedTitle}" not found`);
-        }
-        return movie;
-    }
-
-    async create(createMovieDto: Partial<Movie>): Promise<Movie> {
+        const movie = this.moviesRepository.create(createMovieDto);
         try {
-            const movie = this.moviesRepository.create(createMovieDto);
             return await this.moviesRepository.save(movie);
         } catch (error) {
             if (error.code === '23505') { // PostgreSQL unique violation code
-                throw new ConflictException(`Movie with title "${createMovieDto.movieTitle}" already exists`);
+                throw new ConflictException(`Movie with title "${createMovieDto.title}" already exists`);
             }
             throw error;
         }
     }
 
-    async update(title: string, updateMovieDto: Partial<Movie>): Promise<Movie> {
-        const movie = await this.findOneByTitle(title);
-        Object.assign(movie, updateMovieDto);
-        return this.moviesRepository.save(movie);
+    async findAll(): Promise<Movie[]> {
+        return this.moviesRepository.find();
     }
 
-    async remove(title: string): Promise<void> {
-        const movie = await this.findOneByTitle(title);
-        await this.moviesRepository.remove(movie);
+    async findOne(id: number): Promise<Movie> {
+        return this.moviesRepository.findOneBy({ id });
+    }
+
+    async findOneByTitle(title: string): Promise<Movie> {
+        const decodedTitle = decodeURIComponent(title);
+        return this.moviesRepository.findOneBy({ title: decodedTitle });
+    }
+
+    async update(title: string, updateMovieDto: UpdateMovieDto): Promise<Movie> {
+        const decodedTitle = decodeURIComponent(title);
+        const movie = await this.findOneByTitle(decodedTitle);
+        if (!movie) {
+            throw new NotFoundException(`Movie with title "${decodedTitle}" not found`);
+        }
+
+        await this.moviesRepository.update(movie.id, updateMovieDto);
+        return this.moviesRepository.findOneBy({ id: movie.id });
+    }
+
+    async remove(id: number): Promise<void> {
+        await this.moviesRepository.delete(id);
     }
 } 

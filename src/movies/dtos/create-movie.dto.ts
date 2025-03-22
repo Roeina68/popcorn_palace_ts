@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNumber, Min, Max, IsInt } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateMovieDto {
   @ApiProperty({ example: 'The Matrix', description: 'The title of the movie' })

@@ -3,27 +3,27 @@ import { ApiProperty } from '@nestjs/swagger';
 
 @Entity()
 export class Movie {
-    @PrimaryGeneratedColumn()
-    @ApiProperty({ description: 'The unique identifier of the movie' })
-    id: number;
+  @PrimaryGeneratedColumn()
+  @ApiProperty({ example: 1, description: 'The unique identifier of the movie' })
+  id: number;
 
-    @Column({ unique: true })
-    @ApiProperty({ description: 'The title of the movie' })
-    movieTitle: string;
+  @Column({ unique: true })
+  @ApiProperty({ example: 'The Matrix', description: 'The title of the movie' })
+  title: string;
 
-    @Column()
-    @ApiProperty({ description: 'The description of the movie' })
-    description: string;
+  @Column()
+  @ApiProperty({ example: 'Sci-Fi', description: 'The genre of the movie' })
+  genre: string;
 
-    @Column()
-    @ApiProperty({ description: 'The release year of the movie' })
-    releaseYear: number;
+  @Column({ default: 0 })
+  @ApiProperty({ example: 136, description: 'Duration in minutes' })
+  duration: number;
 
-    @Column()
-    @ApiProperty({ description: 'The duration of the movie in minutes' })
-    duration: number;
+  @Column({ default: new Date().getFullYear() })
+  @ApiProperty({ example: 1999, description: 'Year of release' })
+  release_year: number;
 
-    @Column()
-    @ApiProperty({ description: 'The genre of the movie' })
-    genre: string;
+  @Column({ type: 'float', default: 0 })
+  @ApiProperty({ example: 8.7, description: 'Rating from 0 to 10' })
+  rating: number;
 } 
