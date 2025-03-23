@@ -27,8 +27,7 @@ export class ShowtimesService {
         const showtime = await this.showtimesRepository.findOneBy({ id });
         if (!showtime) {
             this.logger.error(`Showtime not found with ID: ${id}`, null, 'ShowtimesService');
-            // throw new ShowtimeNotFoundException(id.toString());
-            return null;
+            throw new ShowtimeNotFoundException(id.toString());
         }
         this.logger.log(`Retrieved showtime: ${showtime.id}`, 'ShowtimesService');
         return showtime;
