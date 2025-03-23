@@ -12,5 +12,6 @@ import { MoviesModule } from '../movies/movies.module'; // <-- 👈 Import the m
     ],
     controllers: [ShowtimesController],
     providers: [ShowtimesService],
+    exports: [ShowtimesService],
 })
 export class ShowtimesModule {} 

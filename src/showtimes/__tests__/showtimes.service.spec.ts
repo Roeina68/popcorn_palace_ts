@@ -9,10 +9,12 @@ import { mockMoviesService } from '../../movies/__mocks__/movies.service.mock';
 import { CreateShowtimeDto } from '../dtos/create-showtime.dto';
 import { UpdateShowtimeDto } from '../dtos/update-showtime.dto';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { LoggerService } from '../../common/services/logger.service';
 
 describe('ShowtimesService', () => {
   let service: ShowtimesService;
   let repo: Repository<Showtime>;
+  let moviesService: MoviesService;
 
   const mockShowtimesRepo = {
     create: jest.fn().mockReturnValue(mockShowtime),
@@ -36,11 +38,22 @@ describe('ShowtimesService', () => {
         ShowtimesService,
         { provide: getRepositoryToken(Showtime), useValue: mockShowtimesRepo },
         { provide: MoviesService, useValue: mockMoviesService },
+        {
+          provide: LoggerService,
+          useValue: {
+            log: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<ShowtimesService>(ShowtimesService);
     repo = module.get<Repository<Showtime>>(getRepositoryToken(Showtime));
+    moviesService = module.get<MoviesService>(MoviesService);
   });
 
   it('should be defined', () => {

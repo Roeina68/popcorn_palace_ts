@@ -7,6 +7,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateBookingDto } from '../dtos/create-booking.dto';
 import { mockBooking, mockConflictingBooking } from '../__mocks__/mockBooking';
 import { ShowtimesService } from '../../showtimes/showtimes.service';
+import { LoggerService } from '../../common/services/logger.service';
 
 const mockShowtimesService = {
   findOne: jest.fn(),
@@ -15,6 +16,7 @@ const mockShowtimesService = {
 describe('BookingsService', () => {
   let service: BookingsService;
   let repository: Repository<Booking>;
+  let showtimesService: ShowtimesService;
 
   const mockRepository = {
     create: jest.fn(),
@@ -39,11 +41,22 @@ describe('BookingsService', () => {
           provide: ShowtimesService,
           useValue: mockShowtimesService,
         },
+        {
+          provide: LoggerService,
+          useValue: {
+            log: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<BookingsService>(BookingsService);
     repository = module.get<Repository<Booking>>(getRepositoryToken(Booking));
+    showtimesService = module.get<ShowtimesService>(ShowtimesService);
   });
 
   afterEach(() => {

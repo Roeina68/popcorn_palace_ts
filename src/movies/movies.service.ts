@@ -4,12 +4,14 @@ import { Repository } from "typeorm";
 import { Movie } from "./entities/movie.entity";
 import { CreateMovieDto } from "./dtos/create-movie.dto";
 import { UpdateMovieDto } from "./dtos/update-movie.dto";
+import { LoggerService } from "../common/services/logger.service";
 
 @Injectable()
 export class MoviesService {
     constructor(
         @InjectRepository(Movie)
         private moviesRepository: Repository<Movie>,
+        private readonly logger: LoggerService,
     ) {}
 
     async create(createMovieDto: CreateMovieDto): Promise<Movie> {
@@ -19,53 +21,85 @@ export class MoviesService {
         });
         
         if (existingMovie) {
+            this.logger.error(`Movie creation failed: Title "${createMovieDto.title}" already exists`, null, 'MoviesService');
             throw new ConflictException(`Movie with title "${createMovieDto.title}" already exists`);
         }
 
         const movie = this.moviesRepository.create(createMovieDto);
         try {
-            return await this.moviesRepository.save(movie);
+            const savedMovie = await this.moviesRepository.save(movie);
+            this.logger.log(`Movie created successfully: ${savedMovie.title}`, 'MoviesService');
+            return savedMovie;
         } catch (error) {
             if (error.code === '23505') { // PostgreSQL unique violation code
+                this.logger.error(`Movie creation failed: Database unique constraint violation for title "${createMovieDto.title}"`, error.stack, 'MoviesService');
                 throw new ConflictException(`Movie with title "${createMovieDto.title}" already exists`);
             }
+            this.logger.error(`Movie creation failed: ${error.message}`, error.stack, 'MoviesService');
             throw error;
         }
     }
 
     async findAll(): Promise<Movie[]> {
-        return this.moviesRepository.find();
+        const movies = await this.moviesRepository.find();
+        this.logger.log(`Retrieved ${movies.length} movies`, 'MoviesService');
+        return movies;
     }
 
     async findOne(id: number): Promise<Movie> {
         const movie = await this.moviesRepository.findOneBy({ id });
         if (!movie) {
+            this.logger.error(`Movie not found with ID: ${id}`, null, 'MoviesService');
             throw new NotFoundException(`Movie with ID ${id} not found`);
         }
+        this.logger.log(`Retrieved movie: ${movie.title}`, 'MoviesService');
         return movie;
     }
 
     async findOneByTitle(title: string): Promise<Movie> {
         const decodedTitle = decodeURIComponent(title);
-        return this.moviesRepository.findOneBy({ title: decodedTitle });
+        const movie = await this.moviesRepository.findOneBy({ title: decodedTitle });
+        if (!movie) {
+            this.logger.error(`Movie not found with title: ${decodedTitle}`, null, 'MoviesService');
+            throw new NotFoundException(`Movie with title "${decodedTitle}" not found`);
+        }
+        this.logger.log(`Retrieved movie: ${movie.title}`, 'MoviesService');
+        return movie;
     }
 
     async update(title: string, updateMovieDto: UpdateMovieDto): Promise<Movie> {
         const decodedTitle = decodeURIComponent(title);
         const movie = await this.findOneByTitle(decodedTitle);
         if (!movie) {
+            this.logger.error(`Movie update failed: Title "${decodedTitle}" not found`, null, 'MoviesService');
             throw new NotFoundException(`Movie with title "${decodedTitle}" not found`);
         }
 
-        await this.moviesRepository.update(movie.id, updateMovieDto);
-        return this.moviesRepository.findOneBy({ id: movie.id });
+        try {
+            await this.moviesRepository.update(movie.id, updateMovieDto);
+            const updatedMovie = await this.moviesRepository.findOneBy({ id: movie.id });
+            this.logger.log(`Movie updated successfully: ${updatedMovie.title}`, 'MoviesService');
+            return updatedMovie;
+        } catch (error) {
+            this.logger.error(`Movie update failed: ${error.message}`, error.stack, 'MoviesService');
+            throw error;
+        }
     }
 
     async remove(title: string): Promise<void> {
-        const movie = await this.findOneByTitle(title);
+        const decodedTitle = decodeURIComponent(title);
+        const movie = await this.findOneByTitle(decodedTitle);
         if (!movie) {
-            throw new NotFoundException(`Movie with title "${title}" not found`);
+            this.logger.error(`Movie removal failed: Title "${decodedTitle}" not found`, null, 'MoviesService');
+            throw new NotFoundException(`Movie with title "${decodedTitle}" not found`);
         }
-        await this.moviesRepository.delete(movie.id);
+
+        try {
+            await this.moviesRepository.delete(movie.id);
+            this.logger.log(`Movie removed successfully: ${movie.title}`, 'MoviesService');
+        } catch (error) {
+            this.logger.error(`Movie removal failed: ${error.message}`, error.stack, 'MoviesService');
+            throw error;
+        }
     }
 }

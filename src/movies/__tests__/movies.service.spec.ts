@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateMovieDto } from '../dtos/create-movie.dto';
 import { UpdateMovieDto } from '../dtos/update-movie.dto';
+import { LoggerService } from '../../common/services/logger.service';
 
 describe('MoviesService', () => {
   let service: MoviesService;
@@ -53,6 +54,16 @@ describe('MoviesService', () => {
         {
           provide: getRepositoryToken(Movie),
           useValue: mockRepo,
+        },
+        {
+          provide: LoggerService,
+          useValue: {
+            log: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn(),
+            verbose: jest.fn(),
+          },
         },
       ],
     }).compile();
