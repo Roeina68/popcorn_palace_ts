@@ -5,7 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MoviesModule } from './movies/movies.module';
 import { ShowtimesModule } from './showtimes/showtimes.module';
-
+import { BookingsModule } from './bookings/bookings.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -19,7 +19,8 @@ import { ShowtimesModule } from './showtimes/showtimes.module';
       synchronize: true, // Set to false in production
     }),
     MoviesModule,
-    ShowtimesModule
+    ShowtimesModule,
+    BookingsModule
   ],
   controllers: [AppController],
   providers: [AppService],

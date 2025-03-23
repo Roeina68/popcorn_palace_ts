@@ -38,7 +38,11 @@ export class MoviesService {
     }
 
     async findOne(id: number): Promise<Movie> {
-        return this.moviesRepository.findOneBy({ id });
+        const movie = await this.moviesRepository.findOneBy({ id });
+        if (!movie) {
+            throw new NotFoundException(`Movie with ID ${id} not found`);
+        }
+        return movie;
     }
 
     async findOneByTitle(title: string): Promise<Movie> {

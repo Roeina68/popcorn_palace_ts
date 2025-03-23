@@ -16,6 +16,7 @@ export const mockShowtime: Showtime = {
     rating: 8.7,
     showtimes: [],
   },
+  bookings: [],
 };
 
 export const mockShowtimeArray: Showtime[] = [mockShowtime];

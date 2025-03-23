@@ -36,6 +36,7 @@ export class MoviesController {
     @Post('update/:movieTitle')
     @ApiOperation({ summary: 'Update a movie by title' })
     @ApiResponse({ status: 200, description: 'Movie updated successfully' })
+    @ApiResponse({ status: 201, description: 'Movie updated successfully' })
     @ApiResponse({ status: 404, description: 'Movie not found' })
     update(
         @Param('movieTitle') movieTitle: string,
