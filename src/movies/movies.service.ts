@@ -57,7 +57,11 @@ export class MoviesService {
         return this.moviesRepository.findOneBy({ id: movie.id });
     }
 
-    async remove(id: number): Promise<void> {
-        await this.moviesRepository.delete(id);
+    async remove(title: string): Promise<void> {
+        const movie = await this.findOneByTitle(title);
+        if (!movie) {
+            throw new NotFoundException(`Movie with title "${title}" not found`);
+        }
+        await this.moviesRepository.delete(movie.id);
     }
 } 

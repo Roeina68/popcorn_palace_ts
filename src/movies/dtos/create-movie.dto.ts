@@ -1,29 +1,35 @@
-import { IsString, IsNumber, Min, Max, IsInt } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNumber, IsNotEmpty, MinLength, Min, Max } from 'class-validator';
 
 export class CreateMovieDto {
-  @ApiProperty({ example: 'The Matrix', description: 'The title of the movie' })
-  @IsString()
-  title: string;
+    @ApiProperty({ description: 'The title of the movie' })
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(1)
+    title: string;
 
-  @ApiProperty({ example: 'Sci-Fi', description: 'The genre of the movie' })
-  @IsString()
-  genre: string;
+    @ApiProperty({ description: 'The description of the movie' })
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(10)
+    description: string;
 
-  @ApiProperty({ example: 136, description: 'Duration in minutes' })
-  @IsNumber()
-  @Min(1)
-  duration: number;
+    @ApiProperty({ description: 'The release year of the movie' })
+    @IsNumber()
+    @IsNotEmpty()
+    @Min(1900)
+    @Max(new Date().getFullYear())
+    releaseYear: number;
 
-  @ApiProperty({ example: 1999, description: 'Year of release' })
-  @IsInt()
-  @Min(1888)
-  @Max(new Date().getFullYear())
-  release_year: number;
+    @ApiProperty({ description: 'The duration of the movie in minutes' })
+    @IsNumber()
+    @IsNotEmpty()
+    @Min(1)
+    duration: number;
 
-  @ApiProperty({ example: 8.7, description: 'Rating from 0 to 10' })
-  @IsNumber()
-  @Min(0)
-  @Max(10)
-  rating: number;
+    @ApiProperty({ description: 'The genre of the movie' })
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(1)
+    genre: string;
 } 

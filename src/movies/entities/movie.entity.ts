@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import { Showtime } from '../../showtimes/entities/showtime.entity';
 
 @Entity()
 export class Movie {
@@ -26,4 +27,7 @@ export class Movie {
   @Column({ type: 'float', default: 0 })
   @ApiProperty({ example: 8.7, description: 'Rating from 0 to 10' })
   rating: number;
+
+  @OneToMany(() => Showtime, (showtime) => showtime.movie)
+  showtimes: Showtime[];
 } 
