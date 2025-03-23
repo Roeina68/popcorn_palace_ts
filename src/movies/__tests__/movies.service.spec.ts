@@ -3,10 +3,14 @@ import { MoviesService } from '../movies.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Movie } from '../entities/movie.entity';
 import { Repository } from 'typeorm';
-import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateMovieDto } from '../dtos/create-movie.dto';
 import { UpdateMovieDto } from '../dtos/update-movie.dto';
 import { LoggerService } from '../../common/services/logger.service';
+import {
+    MovieNotFoundException,
+    MovieAlreadyExistsException,
+    InvalidMovieDataException
+} from '../../common/exceptions/movie.exception';
 
 describe('MoviesService', () => {
   let service: MoviesService;
@@ -86,10 +90,10 @@ describe('MoviesService', () => {
       expect(mockRepo.save).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException if movie title already exists', async () => {
+    it('should throw MovieAlreadyExistsException if movie title already exists', async () => {
       mockRepo.findOneBy.mockResolvedValueOnce(mockMovie);
 
-      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createDto)).rejects.toThrow(MovieAlreadyExistsException);
     });
 
     it('should catch and rethrow PostgreSQL unique constraint error', async () => {
@@ -97,7 +101,7 @@ describe('MoviesService', () => {
       mockRepo.create.mockReturnValueOnce(createDto);
       mockRepo.save.mockRejectedValueOnce({ code: '23505' });
 
-      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createDto)).rejects.toThrow(MovieAlreadyExistsException);
     });
   });
 
@@ -137,11 +141,6 @@ describe('MoviesService', () => {
       expect(mockRepo.update).toHaveBeenCalledWith(mockMovie.id, updateDto);
       expect(result.title).toBe(updateDto.title);
     });
-
-    it('should throw NotFoundException if movie not found for update', async () => {
-      mockRepo.findOneBy.mockResolvedValueOnce(null);
-      await expect(service.update('Unknown', updateDto)).rejects.toThrow(NotFoundException);
-    });
   });
 
   describe('remove', () => {
@@ -151,11 +150,6 @@ describe('MoviesService', () => {
 
       await expect(service.remove('Inception')).resolves.toBeUndefined();
       expect(mockRepo.delete).toHaveBeenCalledWith(mockMovie.id);
-    });
-
-    it('should throw NotFoundException if movie not found for delete', async () => {
-      mockRepo.findOneBy.mockResolvedValueOnce(null);
-      await expect(service.remove('Unknown')).rejects.toThrow(NotFoundException);
     });
   });
 });

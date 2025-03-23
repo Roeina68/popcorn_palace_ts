@@ -8,8 +8,13 @@ import { mockShowtime, mockShowtimeArray } from '../__mocks__/mockShowtime';
 import { mockMoviesService } from '../../movies/__mocks__/movies.service.mock';
 import { CreateShowtimeDto } from '../dtos/create-showtime.dto';
 import { UpdateShowtimeDto } from '../dtos/update-showtime.dto';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { LoggerService } from '../../common/services/logger.service';
+import {
+    ShowtimeNotFoundException,
+    InvalidShowtimeDataException,
+    ShowtimeOverlapException,
+    ShowtimeInPastException
+} from '../../common/exceptions/showtime.exception';
 
 describe('ShowtimesService', () => {
   let service: ShowtimesService;
@@ -73,9 +78,8 @@ describe('ShowtimesService', () => {
       expect(result).toEqual(mockShowtime);
     });
 
-    it('should return null if showtime not found', async () => {
-      const result = await service.findOne(999);
-      expect(result).toBeNull();
+    it('should throw ShowtimeNotFoundException if showtime not found', async () => {
+      await expect(service.findOne(999)).rejects.toThrow(ShowtimeNotFoundException);
     });
   });
 
@@ -84,8 +88,8 @@ describe('ShowtimesService', () => {
       const dto: CreateShowtimeDto = {
         movieId: 1,
         theater: 'Test Theater',
-        startTime: new Date(),
-        endTime: new Date(),
+        startTime: new Date(Date.now() + 86400000), // Tomorrow
+        endTime: new Date(Date.now() + 90000000), // Tomorrow + 1 hour
         price: 15,
       };
 
@@ -93,18 +97,30 @@ describe('ShowtimesService', () => {
       expect(result).toEqual(mockShowtime);
     });
 
-    it('should throw NotFoundException if movie is missing', async () => {
+    it('should throw InvalidShowtimeDataException if movie is missing', async () => {
       jest.spyOn(mockMoviesService, 'findOne').mockResolvedValueOnce(null);
-      await expect(service.create({ ...mockShowtime, movieId: 999 })).rejects.toThrow(NotFoundException);
+      await expect(service.create({ ...mockShowtime, movieId: 999 })).rejects.toThrow(InvalidShowtimeDataException);
     });
 
-    it('should throw BadRequestException if showtime overlaps', async () => {
+    it('should throw ShowtimeOverlapException if showtime overlaps', async () => {
       mockShowtimesRepo.createQueryBuilder().getMany.mockResolvedValueOnce([mockShowtime]);
 
       await expect(service.create({
         ...mockShowtime,
         movieId: 1,
-      })).rejects.toThrow(BadRequestException);
+        startTime: new Date(Date.now() + 86400000),
+        endTime: new Date(Date.now() + 90000000),
+      })).rejects.toThrow(ShowtimeOverlapException);
+    });
+
+    it('should throw ShowtimeInPastException if start time is in the past', async () => {
+      const pastDate = new Date(Date.now() - 86400000); // Yesterday
+      await expect(service.create({
+        ...mockShowtime,
+        movieId: 1,
+        startTime: pastDate,
+        endTime: new Date(Date.now() + 3600000),
+      })).rejects.toThrow(ShowtimeInPastException);
     });
   });
 
@@ -113,8 +129,8 @@ describe('ShowtimesService', () => {
       const dto: UpdateShowtimeDto = {
         movieId: 1,
         theater: 'Updated',
-        startTime: new Date(),
-        endTime: new Date(),
+        startTime: new Date(Date.now() + 86400000),
+        endTime: new Date(Date.now() + 90000000),
         price: 22,
       };
 
@@ -122,9 +138,9 @@ describe('ShowtimesService', () => {
       expect(result).toEqual(mockShowtime);
     });
 
-    it('should throw NotFoundException if showtime is missing', async () => {
+    it('should throw ShowtimeNotFoundException if showtime is missing', async () => {
       mockShowtimesRepo.findOneBy.mockResolvedValueOnce(null);
-      await expect(service.update(999, {} as any)).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, {} as any)).rejects.toThrow(ShowtimeNotFoundException);
     });
   });
 
@@ -134,9 +150,9 @@ describe('ShowtimesService', () => {
       expect(mockShowtimesRepo.delete).toHaveBeenCalledWith(mockShowtime.id);
     });
 
-    it('should throw NotFoundException if showtime is missing', async () => {
+    it('should throw ShowtimeNotFoundException if showtime is missing', async () => {
       mockShowtimesRepo.findOneBy.mockResolvedValueOnce(null);
-      await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(999)).rejects.toThrow(ShowtimeNotFoundException);
     });
   });
 });

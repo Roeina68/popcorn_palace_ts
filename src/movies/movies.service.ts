@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException, ConflictException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Movie } from "./entities/movie.entity";
 import { CreateMovieDto } from "./dtos/create-movie.dto";
 import { UpdateMovieDto } from "./dtos/update-movie.dto";
 import { LoggerService } from "../common/services/logger.service";
+import { 
+    MovieNotFoundException, 
+    MovieAlreadyExistsException, 
+    InvalidMovieDataException 
+} from "../common/exceptions/movie.exception";
 
 @Injectable()
 export class MoviesService {
@@ -22,7 +27,7 @@ export class MoviesService {
         
         if (existingMovie) {
             this.logger.error(`Movie creation failed: Title "${createMovieDto.title}" already exists`, null, 'MoviesService');
-            throw new ConflictException(`Movie with title "${createMovieDto.title}" already exists`);
+            throw new MovieAlreadyExistsException(createMovieDto.title);
         }
 
         const movie = this.moviesRepository.create(createMovieDto);
@@ -33,10 +38,10 @@ export class MoviesService {
         } catch (error) {
             if (error.code === '23505') { // PostgreSQL unique violation code
                 this.logger.error(`Movie creation failed: Database unique constraint violation for title "${createMovieDto.title}"`, error.stack, 'MoviesService');
-                throw new ConflictException(`Movie with title "${createMovieDto.title}" already exists`);
+                throw new MovieAlreadyExistsException(createMovieDto.title);
             }
             this.logger.error(`Movie creation failed: ${error.message}`, error.stack, 'MoviesService');
-            throw error;
+            throw new InvalidMovieDataException("Movie creation failed");
         }
     }
 
@@ -50,7 +55,7 @@ export class MoviesService {
         const movie = await this.moviesRepository.findOneBy({ id });
         if (!movie) {
             this.logger.error(`Movie not found with ID: ${id}`, null, 'MoviesService');
-            throw new NotFoundException(`Movie with ID ${id} not found`);
+            throw new MovieNotFoundException(id.toString());
         }
         this.logger.log(`Retrieved movie: ${movie.title}`, 'MoviesService');
         return movie;
@@ -61,7 +66,7 @@ export class MoviesService {
         const movie = await this.moviesRepository.findOneBy({ title: decodedTitle });
         if (!movie) {
             this.logger.error(`Movie not found with title: ${decodedTitle}`, null, 'MoviesService');
-            throw new NotFoundException(`Movie with title "${decodedTitle}" not found`);
+            throw new MovieNotFoundException(decodedTitle);
         }
         this.logger.log(`Retrieved movie: ${movie.title}`, 'MoviesService');
         return movie;
@@ -72,7 +77,7 @@ export class MoviesService {
         const movie = await this.findOneByTitle(decodedTitle);
         if (!movie) {
             this.logger.error(`Movie update failed: Title "${decodedTitle}" not found`, null, 'MoviesService');
-            throw new NotFoundException(`Movie with title "${decodedTitle}" not found`);
+            throw new MovieNotFoundException(decodedTitle);
         }
 
         try {
@@ -82,7 +87,7 @@ export class MoviesService {
             return updatedMovie;
         } catch (error) {
             this.logger.error(`Movie update failed: ${error.message}`, error.stack, 'MoviesService');
-            throw error;
+            throw new InvalidMovieDataException("Movie update failed");
         }
     }
 
@@ -91,7 +96,7 @@ export class MoviesService {
         const movie = await this.findOneByTitle(decodedTitle);
         if (!movie) {
             this.logger.error(`Movie removal failed: Title "${decodedTitle}" not found`, null, 'MoviesService');
-            throw new NotFoundException(`Movie with title "${decodedTitle}" not found`);
+            throw new MovieNotFoundException(decodedTitle);
         }
 
         try {
@@ -99,7 +104,7 @@ export class MoviesService {
             this.logger.log(`Movie removed successfully: ${movie.title}`, 'MoviesService');
         } catch (error) {
             this.logger.error(`Movie removal failed: ${error.message}`, error.stack, 'MoviesService');
-            throw error;
+            throw new InvalidMovieDataException("Movie removal failed");
         }
     }
 }

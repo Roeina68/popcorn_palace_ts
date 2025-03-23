@@ -3,11 +3,18 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BookingsService } from '../bookings.service';
 import { Booking } from '../entities/booking.entity';
-import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateBookingDto } from '../dtos/create-booking.dto';
 import { mockBooking, mockConflictingBooking } from '../__mocks__/mockBooking';
 import { ShowtimesService } from '../../showtimes/showtimes.service';
 import { LoggerService } from '../../common/services/logger.service';
+import {
+    BookingNotFoundException,
+    BookingAlreadyExistsException,
+    InvalidBookingDataException,
+    ShowtimeFullException,
+    InvalidSeatException,
+    BookingExpiredException
+} from '../../common/exceptions/booking.exception';
 
 const mockShowtimesService = {
   findOne: jest.fn(),
@@ -22,6 +29,8 @@ describe('BookingsService', () => {
     create: jest.fn(),
     save: jest.fn(),
     findOneBy: jest.fn(),
+    find: jest.fn(),
+    delete: jest.fn(),
   };
 
   const futureShowtime = {
@@ -88,40 +97,62 @@ describe('BookingsService', () => {
       expect(mockRepository.save).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException when seat is already booked', async () => {
+    it('should throw BookingAlreadyExistsException when seat is already booked', async () => {
       mockShowtimesService.findOne.mockResolvedValue(futureShowtime);
       mockRepository.findOneBy.mockResolvedValue(mockConflictingBooking);
 
-      await expect(service.create(createBookingDto)).rejects.toThrow(ConflictException);
-      await expect(service.create(createBookingDto)).rejects.toThrow('Seat is already booked for this showtime');
+      await expect(service.create(createBookingDto)).rejects.toThrow(BookingAlreadyExistsException);
+      await expect(service.create(createBookingDto)).rejects.toThrow(`Seat ${createBookingDto.seatNumber} is already booked for showtime ${createBookingDto.showtimeId}`);
 
       expect(mockRepository.create).not.toHaveBeenCalled();
       expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
-    it('should handle database errors gracefully', async () => {
+    it('should throw InvalidBookingDataException for database errors', async () => {
       mockShowtimesService.findOne.mockResolvedValue(futureShowtime);
       mockRepository.findOneBy.mockResolvedValue(null);
       mockRepository.create.mockReturnValue(mockBooking);
       mockRepository.save.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.create(createBookingDto)).rejects.toThrow('Database error');
+      await expect(service.create(createBookingDto)).rejects.toThrow(InvalidBookingDataException);
     });
 
-    it('should validate input DTO', async () => {
+    it('should throw InvalidBookingDataException for invalid showtime', async () => {
+      mockShowtimesService.findOne.mockResolvedValue(null);
+
+      await expect(service.create(createBookingDto)).rejects.toThrow(InvalidBookingDataException);
+      expect(mockRepository.findOneBy).not.toHaveBeenCalled();
+      expect(mockRepository.create).not.toHaveBeenCalled();
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw InvalidSeatException for invalid seat number', async () => {
       const invalidDto = {
-        userId: 'invalid-uuid',
-        showtimeId: -1,
-        seatNumber: 0,
-      } as CreateBookingDto;
+        ...createBookingDto,
+        seatNumber: 101, // Assuming theater has 100 seats
+      };
 
-      // We simulate that the showtime doesn't exist
-      mockShowtimesService.findOne.mockResolvedValue(undefined);
+      mockShowtimesService.findOne.mockResolvedValue(futureShowtime);
 
-      await expect(service.create(invalidDto)).rejects.toThrow();
+      await expect(service.create(invalidDto)).rejects.toThrow(InvalidSeatException);
+      expect(mockRepository.findOneBy).not.toHaveBeenCalled();
+      expect(mockRepository.create).not.toHaveBeenCalled();
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw BookingExpiredException for past showtime', async () => {
+      const pastShowtime = {
+        id: 1,
+        startTime: new Date(Date.now() - 100000), // 100 seconds in the past
+      };
+
+      mockShowtimesService.findOne.mockResolvedValue(pastShowtime);
+
+      await expect(service.create(createBookingDto)).rejects.toThrow(BookingExpiredException);
       expect(mockRepository.findOneBy).not.toHaveBeenCalled();
       expect(mockRepository.create).not.toHaveBeenCalled();
       expect(mockRepository.save).not.toHaveBeenCalled();
     });
   });
-});
+
+  });
