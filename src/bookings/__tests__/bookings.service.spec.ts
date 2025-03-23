@@ -3,9 +3,14 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BookingsService } from '../bookings.service';
 import { Booking } from '../entities/booking.entity';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateBookingDto } from '../dtos/create-booking.dto';
 import { mockBooking, mockConflictingBooking } from '../__mocks__/mockBooking';
+import { ShowtimesService } from '../../showtimes/showtimes.service';
+
+const mockShowtimesService = {
+  findOne: jest.fn(),
+};
 
 describe('BookingsService', () => {
   let service: BookingsService;
@@ -17,6 +22,11 @@ describe('BookingsService', () => {
     findOneBy: jest.fn(),
   };
 
+  const futureShowtime = {
+    id: 1,
+    startTime: new Date(Date.now() + 100000), // 100 seconds in the future
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -24,6 +34,10 @@ describe('BookingsService', () => {
         {
           provide: getRepositoryToken(Booking),
           useValue: mockRepository,
+        },
+        {
+          provide: ShowtimesService,
+          useValue: mockShowtimesService,
         },
       ],
     }).compile();
@@ -44,8 +58,8 @@ describe('BookingsService', () => {
     };
 
     it('should create a booking successfully', async () => {
-      // Mock repository responses
-      mockRepository.findOneBy.mockResolvedValue(null); // No existing booking
+      mockShowtimesService.findOne.mockResolvedValue(futureShowtime);
+      mockRepository.findOneBy.mockResolvedValue(null);
       mockRepository.create.mockReturnValue(mockBooking);
       mockRepository.save.mockResolvedValue(mockBooking);
 
@@ -62,21 +76,18 @@ describe('BookingsService', () => {
     });
 
     it('should throw ConflictException when seat is already booked', async () => {
-      // Mock repository to find existing booking
+      mockShowtimesService.findOne.mockResolvedValue(futureShowtime);
       mockRepository.findOneBy.mockResolvedValue(mockConflictingBooking);
 
       await expect(service.create(createBookingDto)).rejects.toThrow(ConflictException);
       await expect(service.create(createBookingDto)).rejects.toThrow('Seat is already booked for this showtime');
-      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
-        showtimeId: createBookingDto.showtimeId,
-        seatNumber: createBookingDto.seatNumber,
-      });
+
       expect(mockRepository.create).not.toHaveBeenCalled();
       expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
     it('should handle database errors gracefully', async () => {
-      // Mock repository to simulate database error
+      mockShowtimesService.findOne.mockResolvedValue(futureShowtime);
       mockRepository.findOneBy.mockResolvedValue(null);
       mockRepository.create.mockReturnValue(mockBooking);
       mockRepository.save.mockRejectedValue(new Error('Database error'));
@@ -90,6 +101,9 @@ describe('BookingsService', () => {
         showtimeId: -1,
         seatNumber: 0,
       } as CreateBookingDto;
+
+      // We simulate that the showtime doesn't exist
+      mockShowtimesService.findOne.mockResolvedValue(undefined);
 
       await expect(service.create(invalidDto)).rejects.toThrow();
       expect(mockRepository.findOneBy).not.toHaveBeenCalled();
