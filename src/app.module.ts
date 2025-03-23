@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MoviesModule } from './movies/movies.module';
+import { ShowtimesModule } from './showtimes/showtimes.module';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { MoviesModule } from './movies/movies.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true, // Set to false in production
     }),
-    MoviesModule
+    MoviesModule,
+    ShowtimesModule
   ],
   controllers: [AppController],
   providers: [AppService],

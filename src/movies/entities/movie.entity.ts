@@ -20,9 +20,9 @@ export class Movie {
   @ApiProperty({ example: 136, description: 'Duration in minutes' })
   duration: number;
 
-  @Column({ default: new Date().getFullYear() })
+  @Column({ name: 'release_year', default: new Date().getFullYear() })
   @ApiProperty({ example: 1999, description: 'Year of release' })
-  release_year: number;
+  releaseYear: number;
 
   @Column({ type: 'float', default: 0 })
   @ApiProperty({ example: 8.7, description: 'Rating from 0 to 10' })

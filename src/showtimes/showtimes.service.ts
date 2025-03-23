@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Between } from "typeorm";
+import { Repository } from "typeorm";
 import { Showtime } from "./entities/showtime.entity";
 import { CreateShowtimeDto } from "./dtos/create-showtime.dto";
-import { MoviesService } from "src/movies/movies.service";
+import { UpdateShowtimeDto } from "./dtos/update-showtime.dto";
+import { MoviesService } from "../movies/movies.service";
 
 @Injectable()
 export class ShowtimesService {
@@ -18,31 +19,49 @@ export class ShowtimesService {
     }
 
     async create(createShowtimeDto: CreateShowtimeDto): Promise<Showtime> {
-        const showtime = this.showtimesRepository.create(createShowtimeDto);
         const movie = await this.moviesService.findOne(createShowtimeDto.movieId);
         if (!movie) {
-            throw new NotFoundException(`Movie with id ${createShowtimeDto.movieId} not found`);
+          throw new NotFoundException(`Movie with id ${createShowtimeDto.movieId} not found`);
         }
-
-        const possibleConflicts = await this.showtimesRepository.find({
-            where: [
-                {
-                theater: showtime.theater,
-                start_time: Between(showtime.start_time,showtime.end_time)
-                },
-                {
-                theater: showtime.theater,
-                end_time: Between(showtime.start_time,showtime.end_time)
-                }
-            ]
-        }); 
-        if (possibleConflicts.length > 0) {
-            throw new BadRequestException('Showtime conflicts with existing showtimes');
+      
+        const showtime = this.showtimesRepository.create({
+          ...createShowtimeDto,
+          movie, // Explicitly assign relation
+        });
+      
+        const conflictingShowtimes = await this.showtimesRepository
+          .createQueryBuilder('showtime')
+          .where('showtime.theater = :theater', { theater: showtime.theater })
+          .andWhere('showtime.start_time <= :newEnd', { newEnd: showtime.endTime })
+          .andWhere('showtime.end_time >= :newStart', { newStart: showtime.startTime })
+          .getMany();
+      
+        if (conflictingShowtimes.length > 0) {
+          throw new BadRequestException('Showtime conflicts with existing showtimes');
         }
-        return this.showtimesRepository.save(showtime); 
-    }
+      
+        return this.showtimesRepository.save(showtime);
+      }
+      
 
     async findAll(): Promise<Showtime[]> {
         return this.showtimesRepository.find();
+    }
+
+    async update(id: number, updateShowtimeDto: UpdateShowtimeDto): Promise<Showtime> {
+        const showtime = await this.findOne(id);
+        if (!showtime) {
+            throw new NotFoundException(`Showtime with id ${id} not found`);
+        }
+        await this.showtimesRepository.update(showtime.id, updateShowtimeDto);
+        return this.showtimesRepository.findOneBy({ id: showtime.id });
+    }
+
+    async remove(id: number): Promise<void> {
+        const showtime = await this.findOne(id);
+        if (!showtime) {
+            throw new NotFoundException(`Showtime with id ${id} not found`);
+        }
+        await this.showtimesRepository.delete(showtime.id);
     }
 }
