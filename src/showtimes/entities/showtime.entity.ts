@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Movie } from '../../movies/entities/movie.entity';
-import { Booking } from '../../bookings/entities/booking.entity'; // <-- Add this
+import { Booking } from '../../bookings/entities/booking.entity';
 
 @Entity()
 export class Showtime {
@@ -35,6 +35,6 @@ export class Showtime {
   movie: Movie;
 
   @OneToMany(() => Booking, (booking) => booking.showtime)
-  @ApiProperty({ type: () => [Booking] }) // <-- ADD this
+  @ApiProperty({ type: () => [Booking] })
   bookings: Booking[];
 }

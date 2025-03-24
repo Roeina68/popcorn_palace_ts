@@ -30,7 +30,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
       path: ctx.getRequest().url,
     };
 
-    // Log the error (you can integrate with your logging service here)
     console.error(exception);
 
     response.status(status).json(errorResponse);

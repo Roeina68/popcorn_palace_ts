@@ -23,6 +23,6 @@ export class Booking {
 
   @ManyToOne(() => Showtime, (showtime) => showtime.bookings, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'showtimeId' })
-  @ApiProperty({ type: () => Showtime }) // <-- ADD this
+  @ApiProperty({ type: () => Showtime })
   showtime: Showtime;
 }
