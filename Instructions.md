@@ -72,7 +72,7 @@ npm run test:watch
 
 Once the application is running, you can access the Swagger API documentation at:
 ```
-http://localhost:3000/api
+http://localhost:3000/docs
 ```
 
 ## Available Scripts
